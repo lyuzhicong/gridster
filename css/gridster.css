@@ -1,0 +1,15 @@
+ul {
+    width: 800px;
+    height: 800px;
+    background-color: #eeeeee;
+}
+
+li {
+    width: 100px;
+    height: 100px;
+    background: #000000
+}
+
+.grid {
+    position: absolute
+}
