@@ -12,13 +12,19 @@
     <ul id="test">
         <li>
         </li>
+        <li>
+        </li>
     </ul>
 </body>
 
-<script src="js/gridster.js"></script>
+<script src="js/gridster-es5.js"></script>
 <script>
-    (function() {
-        $("#test").gridster()
+    $("#test").gridster({
+        widget_margin: [10, 10],
+        widget_base_dimensions: [400, 400],
+        draggable: {
+            stop: function($w) {}
+        }
     })
 </script>
 

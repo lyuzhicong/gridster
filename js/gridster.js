@@ -1,20 +1,19 @@
 ;
 (function(factory) {
     if (typeof define === 'function' && define.amd) {
-        define(['jquery', 'lodash'], factory);
+        define(['jquery'], factory);
     } else {
-        factory(jQuery, _);
+        factory(jQuery);
     }
-})(function($, _) {
+})(function($) {
     class Gridster {
         constructor(node, options) {
             this.node = node;
             this.options = options;
-            init();
         }
 
-        static init() {
-
+        init = () => {
+            console.log("???")
             var node = $(this.node);
             node.children().attr("class", "grid");
 
@@ -51,7 +50,16 @@
 
     }
 
-    var drag = () => {
+    let dragStart = () => {
+        let _this = this;
+
+    }
+
+    let drag = () => {
+
+    }
+
+    let dragEnd = () => {
 
     }
 
