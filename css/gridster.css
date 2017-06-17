@@ -2,14 +2,20 @@ ul {
     width: 800px;
     height: 800px;
     background-color: #eeeeee;
+    position: relative;
 }
 
 li {
     width: 50%;
     height: 100px;
-    background: #000000
+    background: #000000;
+    position: absolute;
 }
 
 .grid {
     position: absolute
+}
+
+#test {
+    margin: 50px;
 }
