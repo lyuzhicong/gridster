@@ -10,6 +10,7 @@ li {
     height: 100px;
     background: #000000;
     position: absolute;
+    color: white;
 }
 
 .grid {

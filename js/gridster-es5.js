@@ -16,36 +16,59 @@
         this.widthPart = parseFloat(this.getStyle(node, 'width')).toFixed() / options.widget_base_dimensions[0];
         this.heightPart = parseFloat(this.getStyle(node, 'height')).toFixed() / options.widget_base_dimensions[1];
         this.childComponent = new Array(this.childs.length);
+        this.init();
 
-        this.initChild();
         console.log(this)
     };
 
     Gridster.prototype = {
         init: function() {
-
+            this.initMatrix();
+            this.initChild();
         },
         initChild: function() {
             for (var i = 0; i < this.childs.length; i++) {
                 var child = new GridsterComponent(this, this.childs[i], this.options);
                 this.childComponent[i] = child;
+                this.setStyle(child.node, {
+                    'transform': 'translate(' + ((this.matrix[i][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[i][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)'
+                })
+                this.setAttr(child.node, {
+                    'data-x': this.matrix[i][0],
+                    'data-y': this.matrix[i][1]
+                })
             }
         },
         initMatrix: function() {
             var len = this.childs.length;
-            var matrix = new Array(len);
+
             var heightLen = this.heightPart;
             var widthLen = this.widthPart;
+            var matrix = new Array(heightLen * widthLen);
 
-            for (; i < ; i++) {
-                matrix[i] = [widthLen * (i + 1), heightLen * (i + 1)]
+            // for (; i < ; i++) {
+            //     matrix[i] = [widthLen * (i + 1), heightLen * (i + 1)]
 
+            // }
+            for (var i = 1; i <= heightLen; i++) {
+                for (var j = 1; j <= widthLen; j++) {
+                    matrix[(i - 1) * widthLen + j - 1] = [j, i];
+                }
             }
-
-
+            this.matrix = matrix;
         },
         getStyle: function(elem, property) {
             return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
+        },
+        setStyle: function(elem, attr) {
+            for (var property in attr) {
+                elem.style[property] = attr[property];
+            }
+        },
+        setAttr: function(elem, attr) {
+            for (var property in attr) {
+                elem.setAttribute(property, attr[property]);
+            }
         }
 
 
