@@ -25,37 +25,70 @@
         init: function() {
             this.initMatrix();
             this.initChild();
+            this.sort();
         },
         initChild: function() {
             for (var i = 0; i < this.childs.length; i++) {
                 var child = new GridsterComponent(this, this.childs[i], this.options);
                 this.childComponent[i] = child;
-                this.setStyle(child.node, {
-                    'transform': 'translate(' + ((this.matrix[i][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[i][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)'
-                })
-                this.setAttr(child.node, {
-                    'data-x': this.matrix[i][0],
-                    'data-y': this.matrix[i][1]
-                })
+            }
+
+        },
+        sort: function(index, array) {
+            var now = 0;
+            var len = this.childs.length;
+            for (var i = 0; i < len; i++) {
+                var child = this.childs[i];
+                if (index && index == i) {
+                    //       now--;
+                    continue;
+                } else if (child) {
+                    this.setStyle(child, {
+                        'transform': 'translate(' + ((this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)',
+                        //     'transition': 'all .5s linear'
+                    })
+                    this.setAttr(child, {
+                        'data-x': this.matrix[i][0],
+                        'data-y': this.matrix[i][1]
+                    });
+                    now++;
+                    if (array) {
+                        for (var j = 0; j < len; j++) {
+                            if (array[0] == this.matrix[j][0] && array[1] == this.matrix[j][1]) {
+                                console.log(j)
+                            }
+                        }
+                    }
+                }
             }
         },
         initMatrix: function() {
-            var len = this.childs.length;
-
-            var heightLen = this.heightPart;
-            var widthLen = this.widthPart;
-            var matrix = new Array(heightLen * widthLen);
-
-            // for (; i < ; i++) {
-            //     matrix[i] = [widthLen * (i + 1), heightLen * (i + 1)]
-
-            // }
+            var len = this.childs.length,
+                heightLen = this.heightPart,
+                widthLen = this.widthPart,
+                matrix = new Array(heightLen * widthLen);
             for (var i = 1; i <= heightLen; i++) {
                 for (var j = 1; j <= widthLen; j++) {
                     matrix[(i - 1) * widthLen + j - 1] = [j, i];
                 }
             }
             this.matrix = matrix;
+        },
+        interchange: function(newElem, targetElem) {
+            var targetNode = targetElem,
+                sourceNode = newElem;
+            var siblingNode = newElem.nextSibling;
+            this.node.insertBefore(sourceNode, targetNode);
+            this.node.insertBefore(targetNode, siblingNode);
+        },
+        insertAfter: function(newElem, targetElem) {
+            var parentElem = targetElem.parentNode;
+
+            if (parentElem.lastChild == targetElem) {
+                parentElem.appendChild(newElem);
+            } else {
+                parentElem.insertBefore(newElem, targetElem);
+            }
         },
         getStyle: function(elem, property) {
             return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
@@ -84,13 +117,7 @@
         this.sourceY = 0;
         this.margin = options.widget_margin;
         this.dimensions = options.widget_base_dimensions;
-        this.init()
-
-        console.log(this)
-            /* child.addEventListener("mousemove", _this.drag);
-             child.addEventListener("mouseup", _this.dragEnd);*/
-
-        // return this;
+        this.init();
     }
 
     GridsterComponent.prototype = {
@@ -105,9 +132,12 @@
             })
         },
         setDrag: function() {
-            var self = this.node;
-            var _this = this;
-            var parent = this.parent.node;
+            var self = this.node,
+                _this = this,
+                index = null,
+                indexnode = null,
+                parent = this.parent.node,
+                nowX, nowY;
             this.node.addEventListener('mousedown', dragStart, false);
 
             function dragStart(event) {
@@ -118,6 +148,12 @@
 
                 this.sourceX = pos.x;
                 this.sourceY = pos.y;
+
+                for (var i = 0; i < _this.parent.childComponent.length; i++) {
+                    if (self == _this.parent.childs[i]) {
+                        index = i;
+                    }
+                }
 
                 document.addEventListener("mousemove", drag, false);
                 document.addEventListener("mouseup", dragEnd, false);
@@ -148,6 +184,13 @@
                     y = (self.sourceY + distanceY).toFixed();
                 }
 
+                if (Math.abs(distanceX) > _this.dimensions[0] / 2 || Math.abs(distanceY) > _this.dimensions[1] / 2) {
+                    nowX = parseInt((self.sourceX + distanceX) / _this.dimensions[0]) + 1;
+                    nowY = parseInt((self.sourceY + distanceY) / _this.dimensions[1]) + 1;
+                    //  _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
+                    //  _this.parent.sort(index);
+                }
+
                 _this.setTargetPos({
                     x: x,
                     y: y
@@ -155,7 +198,10 @@
             }
 
             function dragEnd(event) {
-
+                console.log(nowX)
+                console.log(nowY)
+                _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
+                _this.parent.sort()
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', dragEnd)
             }
@@ -167,7 +213,7 @@
                 this.node.style[transform] = 'translate(' + pos.x + 'px,' + pos.y + 'px)';
             } else {
                 this.node.style.left = pos.x + 'px';
-                this.node.stye.top = pos.y + 'px';
+                this.node.style.top = pos.y + 'px';
             }
         },
         getTransform: function() {
