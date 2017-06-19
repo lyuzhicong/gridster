@@ -11,6 +11,9 @@ li {
     background: #000000;
     position: absolute;
     color: white;
+    font-size: 20px;
+    text-align: center;
+    line-height: 100px;
 }
 
 .grid {

@@ -26,6 +26,7 @@
             this.initMatrix();
             this.initChild();
             this.sort();
+            document.body.setAttribute('onselectstart', 'return false')
         },
         initChild: function() {
             for (var i = 0; i < this.childs.length; i++) {
@@ -75,6 +76,7 @@
             this.matrix = matrix;
         },
         interchange: function(newElem, targetElem) {
+            if (!newElem || !targetElem) return;
             var targetNode = targetElem,
                 sourceNode = newElem;
             var siblingNode = newElem.nextSibling;
@@ -166,7 +168,9 @@
                     distanceX = currentX - self.startX,
                     distanceY = currentY - self.startY,
                     x = 0,
-                    y = 0;
+                    y = 0,
+                    idxX = 0,
+                    idxY = 0;
 
                 if ((self.sourceX + distanceX).toFixed() < 0) {
                     x = 0;
@@ -187,8 +191,24 @@
                 if (Math.abs(distanceX) > _this.dimensions[0] / 2 || Math.abs(distanceY) > _this.dimensions[1] / 2) {
                     nowX = parseInt((self.sourceX + distanceX) / _this.dimensions[0]) + 1;
                     nowY = parseInt((self.sourceY + distanceY) / _this.dimensions[1]) + 1;
-                    //  _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
-                    //  _this.parent.sort(index);
+                    console.log(nowX + ',' + nowY)
+                    if (Math.abs(distanceX) > _this.dimensions[0] / 2) {
+                        var nx = parseInt(_this.getStyle(_this.parent.childs[(nowY - 1) * 4 + nowX + 1], 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
+                        var ny = parseInt(_this.getStyle(_this.parent.childs[(nowY - 1) * 4 + nowX + 1], 'transform').match(/-?\d+/g)[5]);
+                        if (nx == nowX * (_this.dimensions[0] + _this.margin[0]) && ny == (nowY - 1) * (_this.dimensions[1] + _this.margin[1])) {
+                            console.log('in')
+                            _this.setStyle(_this.parent.childs[(nowY - 1) * 4 + nowX], {
+                                'transform': 'translate(' + nx + 'px,' + ny + 'px)',
+                                'transition': 'all .3s linear'
+                            })
+                        }
+
+                    } else if (Math.abs(distanceY) > _this.dimensions[1] / 2) {
+                        _this.setStyle(_this.parent.childs[(nowY - 1) * 4 + nowX - 1], {
+                            'transform': 'translateY(' + _this.dimensions[1] + 'px)',
+                            'transition': 'all .3s linear'
+                        })
+                    }
                 }
 
                 _this.setTargetPos({
@@ -198,10 +218,13 @@
             }
 
             function dragEnd(event) {
-                console.log(nowX)
-                console.log(nowY)
-                _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
-                _this.parent.sort()
+                if (nowX && nowY) {
+                    _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
+                    nowX = null;
+                    nowY = null;
+                }
+                _this.parent.sort();
+
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', dragEnd)
             }
@@ -268,8 +291,6 @@
         }
 
     }
-
-
 
     $.fn.gridster = function(opts) {
         return this.each(function() {
