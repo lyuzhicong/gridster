@@ -18,7 +18,6 @@
         this.childComponent = new Array(this.childs.length);
         this.init();
 
-        console.log(this)
     };
 
     Gridster.prototype = {
@@ -47,19 +46,14 @@
                     this.setStyle(child, {
                         'transform': 'translate(' + ((this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)',
                         //     'transition': 'all .5s linear'
-                    })
-                    this.setAttr(child, {
-                        'data-x': this.matrix[i][0],
-                        'data-y': this.matrix[i][1]
                     });
+                    this.setAttr(child, {
+                        'data-col': this.matrix[i][0],
+                        'data-row': this.matrix[i][1]
+                    });
+                    this.childComponent[i].col = this.matrix[i][0];
+                    this.childComponent[i].row = this.matrix[i][1];
                     now++;
-                    if (array) {
-                        for (var j = 0; j < len; j++) {
-                            if (array[0] == this.matrix[j][0] && array[1] == this.matrix[j][1]) {
-                                console.log(j)
-                            }
-                        }
-                    }
                 }
             }
         },
@@ -104,13 +98,15 @@
             for (var property in attr) {
                 elem.setAttribute(property, attr[property]);
             }
+        },
+        getAttr: function(elem, property) {
+            return elem.getAttribute(property);
         }
 
 
     }
 
     var GridsterComponent = function(parent, child, options) {
-        //    this.move = false;
         this.node = child;
         this.parent = parent;
         this.startX = 0;
@@ -132,6 +128,7 @@
                 'width': this.dimensions[0] + 'px',
                 'height': this.dimensions[1] + 'px'
             })
+
         },
         setDrag: function() {
             var self = this.node,
@@ -139,7 +136,9 @@
                 index = null,
                 indexnode = null,
                 parent = this.parent.node,
-                nowX, nowY;
+                col, row, move = false,
+                changenode = null,
+                widthPart = this.parent.widthPart;
             this.node.addEventListener('mousedown', dragStart, false);
 
             function dragStart(event) {
@@ -188,43 +187,73 @@
                     y = (self.sourceY + distanceY).toFixed();
                 }
 
-                if (Math.abs(distanceX) > _this.dimensions[0] / 2 || Math.abs(distanceY) > _this.dimensions[1] / 2) {
-                    nowX = parseInt((self.sourceX + distanceX) / _this.dimensions[0]) + 1;
-                    nowY = parseInt((self.sourceY + distanceY) / _this.dimensions[1]) + 1;
-                    console.log(nowX + ',' + nowY)
-                    if (Math.abs(distanceX) > _this.dimensions[0] / 2) {
-                        var nx = parseInt(_this.getStyle(_this.parent.childs[(nowY - 1) * 4 + nowX + 1], 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
-                        var ny = parseInt(_this.getStyle(_this.parent.childs[(nowY - 1) * 4 + nowX + 1], 'transform').match(/-?\d+/g)[5]);
-                        if (nx == nowX * (_this.dimensions[0] + _this.margin[0]) && ny == (nowY - 1) * (_this.dimensions[1] + _this.margin[1])) {
-                            console.log('in')
-                            _this.setStyle(_this.parent.childs[(nowY - 1) * 4 + nowX], {
-                                'transform': 'translate(' + nx + 'px,' + ny + 'px)',
-                                'transition': 'all .3s linear'
-                            })
-                        }
+                if ((Math.abs(distanceX) > _this.dimensions[0] / 2 || Math.abs(distanceY) > _this.dimensions[1] / 2) && !move) {
+                    var changenode = null;
+                    var nx, ny;
+                    col = parseInt(Math.abs(self.sourceX + distanceX) / (_this.dimensions[0] + _this.margin[0])) + 1;
+                    row = parseInt(Math.abs(self.sourceY + distanceY) / (_this.dimensions[1] + _this.margin[1])) + 1;
+                    if (distanceX > _this.dimensions[0] / 2) {
+                        changenode = _this.parent.childs[(row - 1) * widthPart + col];
+                        if (!changenode) return;
+                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
+                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
 
-                    } else if (Math.abs(distanceY) > _this.dimensions[1] / 2) {
-                        _this.setStyle(_this.parent.childs[(nowY - 1) * 4 + nowX - 1], {
-                            'transform': 'translateY(' + _this.dimensions[1] + 'px)',
+
+                    } else if (distanceY > _this.dimensions[1] / 2) {
+                        changenode = _this.parent.childs[row * widthPart + col - 1];
+                        if (!changenode) return;
+                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
+                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) - _this.dimensions[1] - _this.margin[1];
+
+                    } else if (-distanceX > _this.dimensions[1] / 2) {
+                        changenode = _this.parent.childs[(row - 1) * widthPart + col - 1];
+                        if (!changenode) return;
+                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) + _this.dimensions[0] + _this.margin[0];
+                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
+
+                    } else if (-distanceY > _this.dimensions[1] / 2) {
+                        changenode = _this.parent.childs[(row - 2) * widthPart + col - 1];
+                        if (!changenode) return;
+                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
+                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) + _this.dimensions[1] + _this.margin[1];
+
+
+                    }
+                    if (changenode && row && col) {
+                        _this.setStyle(changenode, {
+                            'transform': 'translate(' + nx + 'px,' + ny + 'px)',
                             'transition': 'all .3s linear'
                         })
+                        _this.parent.interchange(_this.parent.childs[index], changenode);
+                        row = null;
+                        col = null;
+                        nx = null;
+                        ny = null;
+                        changenode = null;
+                        move = true;
                     }
+
                 }
 
                 _this.setTargetPos({
                     x: x,
                     y: y
                 })
+
+                if (Math.abs(distanceX) > (_this.dimensions[0] + _this.margin[0]) || Math.abs(distanceY) > (_this.dimensions[1] + _this.margin[1])) {
+                    move = false;
+                    for (var i = 0; i < _this.parent.childComponent.length; i++) {
+                        if (self == _this.parent.childs[i]) {
+                            index = i;
+                        }
+                    }
+                }
+
             }
 
             function dragEnd(event) {
-                if (nowX && nowY) {
-                    _this.parent.interchange(_this.parent.childs[index], _this.parent.childs[(nowY - 1) * 4 + nowX - 1])
-                    nowX = null;
-                    nowY = null;
-                }
                 _this.parent.sort();
-
+                move = false;
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', dragEnd)
             }
