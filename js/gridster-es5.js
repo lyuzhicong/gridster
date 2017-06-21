@@ -40,7 +40,6 @@
             for (var i = 0; i < len; i++) {
                 var child = this.childs[i];
                 if (index && index == i) {
-                    //       now--;
                     continue;
                 } else if (child) {
                     this.setStyle(child, {
@@ -56,6 +55,7 @@
                     now++;
                 }
             }
+            console.log(this)
         },
         initMatrix: function() {
             var len = this.childs.length,
@@ -69,15 +69,17 @@
             }
             this.matrix = matrix;
         },
-        interchange: function(newElem, targetElem) {
+        interchange: function(newElem, targetElem, newIdx, targetIdx) {
             if (!newElem || !targetElem) return;
             var targetNode = targetElem,
                 sourceNode = newElem;
             var siblingNode = newElem.nextSibling;
             this.node.insertBefore(sourceNode, targetNode);
             this.node.insertBefore(targetNode, siblingNode);
+            //  this.childComponent[newIdx] = this.childComponent.splice(targetIdx, 1, this.childComponent[newIdx])[0];
+            //  console.log('change')
         },
-        insertAfter: function(newElem, targetElem) {
+        /*insertAfter: function(newElem, targetElem) {
             var parentElem = targetElem.parentNode;
 
             if (parentElem.lastChild == targetElem) {
@@ -85,7 +87,7 @@
             } else {
                 parentElem.insertBefore(newElem, targetElem);
             }
-        },
+        },*/
         getStyle: function(elem, property) {
             return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
         },
@@ -136,25 +138,34 @@
                 index = null,
                 indexnode = null,
                 parent = this.parent.node,
-                col, row, move = false,
+                matrix = this.parent.matrix,
+                move = false,
                 changenode = null,
-                widthPart = this.parent.widthPart;
+                indexArray = null,
+                n = 0,
+                widthPart = this.parent.widthPart,
+                width = _this.dimensions[0],
+                height = _this.dimensions[1],
+                marginTop = _this.margin[0],
+                marginLeft = _this.margin[1];
             this.node.addEventListener('mousedown', dragStart, false);
 
             function dragStart(event) {
                 var pos = _this.getTargetPos();
 
-                this.startX = event.pageX;
-                this.startY = event.pageY;
+                this.startX = _this.startX = event.pageX;
+                this.startY = _this.startY = event.pageY;
 
-                this.sourceX = pos.x;
-                this.sourceY = pos.y;
+                this.sourceX = _this.sourceX = pos.x;
+                this.sourceY = _this.sourceY = pos.y;
 
                 for (var i = 0; i < _this.parent.childComponent.length; i++) {
                     if (self == _this.parent.childs[i]) {
                         index = i;
                     }
                 }
+
+
 
                 document.addEventListener("mousemove", drag, false);
                 document.addEventListener("mouseup", dragEnd, false);
@@ -169,7 +180,10 @@
                     x = 0,
                     y = 0,
                     idxX = 0,
-                    idxY = 0;
+                    idxY = 0,
+                    col = _this.col,
+                    row = _this.row,
+                    changeIdx = null;
 
                 if ((self.sourceX + distanceX).toFixed() < 0) {
                     x = 0;
@@ -186,33 +200,85 @@
                 } else {
                     y = (self.sourceY + distanceY).toFixed();
                 }
-
-                if ((Math.abs(distanceX) > _this.dimensions[0] / 2 || Math.abs(distanceY) > _this.dimensions[1] / 2) && !move) {
-                    var changenode = null;
-                    var nx, ny;
-                    col = parseInt(Math.abs(self.sourceX + distanceX) / (_this.dimensions[0] + _this.margin[0])) + 1;
-                    row = parseInt(Math.abs(self.sourceY + distanceY) / (_this.dimensions[1] + _this.margin[1])) + 1;
-                    if (distanceX > _this.dimensions[0] / 2) {
-                        changenode = _this.parent.childs[(row - 1) * widthPart + col];
+                console.log(row + ',' + col)
+                if (!move) {
+                    if (x % (width + marginLeft) > (width + marginLeft) / 2 && distanceX > 0) {
+                        changeIdx = (row - 1) * widthPart + col;
+                        changenode = _this.parent.childs[changeIdx];
+                        col = col + 1
                         if (!changenode) return;
                         nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
                         ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
 
+                    } else if (x % (width + marginLeft) < (width + marginLeft) / 2 && distanceX < 0) {
 
-                    } else if (distanceY > _this.dimensions[1] / 2) {
-                        changenode = _this.parent.childs[row * widthPart + col - 1];
+                    }
+
+                    if (y % (height + marginTop) > (height + marginTop) / 2 && distanceY > 0) {
+
+                    } else if (y % (height + marginTop) < (height + marginTop) / 2 && distanceY < 0) {
+
+                    }
+
+                    move = true;
+
+                    if (changenode && row && col && move) {
+                        _this.setStyle(changenode, {
+                            'transform': 'translate(' + nx + 'px,' + ny + 'px)',
+                        })
+                        _this.parent.interchange(_this.parent.childs[index], changenode, index, changeIdx);
+                        row = null;
+                        col = null;
+                        nx = null;
+                        ny = null;
+                        changenode = null;
+                        changeIdx = null;
+
+                        move = false;
+                    }
+                } else {
+
+                }
+
+
+
+                /*if ((Math.abs(distanceX) > _this.dimensions[0] * (n + 0.5) || Math.abs(distanceY) > _this.dimensions[1] * (n + 0.5)) && !move) {
+                    var changenode = null;
+                    var nx, ny;
+                    col = parseInt(x / (_this.dimensions[0] + _this.margin[0])) + 1;
+                    row = parseInt(y / (_this.dimensions[1] + _this.margin[1])) + 1;
+                    if (distanceX > _this.dimensions[0] * (n + 0.5)) { //right
+
+                        changeIdx = (nrow - 1) * widthPart + ncol;
+                        changenode = _this.parent.childs[changeIdx];
+                        ncol = ncol + 1
+                        if (!changenode) return;
+                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
+                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
+                        move = true;
+
+                    } else if (distanceY > _this.dimensions[1] * (n + 0.5)) { //bottom
+                        console.log('2')
+
+                        changenode = _this.parent.childs[nrow * widthPart + ncol - 1];
+                        nrow += 1
                         if (!changenode) return;
                         nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
                         ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) - _this.dimensions[1] - _this.margin[1];
 
-                    } else if (-distanceX > _this.dimensions[1] / 2) {
-                        changenode = _this.parent.childs[(row - 1) * widthPart + col - 1];
+                    } else if (-distanceX > _this.dimensions[1] * (n + 0.5)) { //left
+                        console.log('3')
+
+                        changenode = _this.parent.childs[(nrow - 1) * widthPart + ncol - 1];
+                        ncol -= 1;
                         if (!changenode) return;
                         nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) + _this.dimensions[0] + _this.margin[0];
                         ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
 
-                    } else if (-distanceY > _this.dimensions[1] / 2) {
-                        changenode = _this.parent.childs[(row - 2) * widthPart + col - 1];
+                    } else if (-distanceY > _this.dimensions[1] * (n + 0.5)) { //top
+                        console.log('4')
+                        changenode = _this.parent.childs[(nrow - 2) * widthPart + ncol - 1];
+                        nrow -= 1;
                         if (!changenode) return;
                         nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
                         ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) + _this.dimensions[1] + _this.margin[1];
@@ -222,18 +288,19 @@
                     if (changenode && row && col) {
                         _this.setStyle(changenode, {
                             'transform': 'translate(' + nx + 'px,' + ny + 'px)',
-                            'transition': 'all .3s linear'
                         })
-                        _this.parent.interchange(_this.parent.childs[index], changenode);
+                        _this.parent.interchange(_this.parent.childs[index], changenode, index, changeIdx);
+                        n += 1;
                         row = null;
                         col = null;
                         nx = null;
                         ny = null;
                         changenode = null;
-                        move = true;
+                        changeIdx = null;
+                        move = false;
                     }
 
-                }
+                }*/
 
                 _this.setTargetPos({
                     x: x,
@@ -242,6 +309,7 @@
 
                 if (Math.abs(distanceX) > (_this.dimensions[0] + _this.margin[0]) || Math.abs(distanceY) > (_this.dimensions[1] + _this.margin[1])) {
                     move = false;
+
                     for (var i = 0; i < _this.parent.childComponent.length; i++) {
                         if (self == _this.parent.childs[i]) {
                             index = i;
