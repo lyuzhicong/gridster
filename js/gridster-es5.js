@@ -13,8 +13,8 @@
         this.node = node;
         this.options = options;
         this.childs = node.children;
-        this.widthPart = parseFloat(this.getStyle(node, 'width')).toFixed() / options.widget_base_dimensions[0];
-        this.heightPart = parseFloat(this.getStyle(node, 'height')).toFixed() / options.widget_base_dimensions[1];
+        this.widthPart = parseInt(parseFloat(getStyle(node, 'width')).toFixed() / options.widget_base_dimensions[0]);
+        this.heightPart = parseInt(parseFloat(getStyle(node, 'height')).toFixed() / options.widget_base_dimensions[1]);
         this.childComponent = new Array(this.childs.length);
         this.init();
 
@@ -26,6 +26,9 @@
             this.initChild();
             this.sort();
             document.body.setAttribute('onselectstart', 'return false')
+            setStyle(this.node, {
+                'height': this.heightPart * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1]) + 'px'
+            })
         },
         initChild: function() {
             for (var i = 0; i < this.childs.length; i++) {
@@ -42,20 +45,22 @@
                 if (index && index == i) {
                     continue;
                 } else if (child) {
-                    this.setStyle(child, {
+                    setStyle(child, {
                         'transform': 'translate(' + ((this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)',
                         //     'transition': 'all .5s linear'
                     });
-                    this.setAttr(child, {
+                    setAttr(child, {
                         'data-col': this.matrix[i][0],
                         'data-row': this.matrix[i][1]
                     });
                     this.childComponent[i].col = this.matrix[i][0];
                     this.childComponent[i].row = this.matrix[i][1];
+
+                    this.childComponent[i].centerX = (this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0]) + (this.options.widget_base_dimensions[0] + this.options.widget_margin[0]) / 2;
+                    this.childComponent[i].centerY = (this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1]) + (this.options.widget_base_dimensions[1] + this.options.widget_margin[1]) / 2;
                     now++;
                 }
             }
-            console.log(this)
         },
         initMatrix: function() {
             var len = this.childs.length,
@@ -73,36 +78,14 @@
             if (!newElem || !targetElem) return;
             var targetNode = targetElem,
                 sourceNode = newElem;
-            var siblingNode = newElem.nextSibling;
-            this.node.insertBefore(sourceNode, targetNode);
-            this.node.insertBefore(targetNode, siblingNode);
-            //  this.childComponent[newIdx] = this.childComponent.splice(targetIdx, 1, this.childComponent[newIdx])[0];
-            //  console.log('change')
-        },
-        /*insertAfter: function(newElem, targetElem) {
-            var parentElem = targetElem.parentNode;
-
-            if (parentElem.lastChild == targetElem) {
-                parentElem.appendChild(newElem);
+            var siblingNode = getNextElement(sourceNode);
+            if (siblingNode == targetElem) {
+                this.node.insertBefore(targetNode, sourceNode);
             } else {
-                parentElem.insertBefore(newElem, targetElem);
+                this.node.insertBefore(sourceNode, targetNode);
+                this.node.insertBefore(targetNode, siblingNode);
             }
-        },*/
-        getStyle: function(elem, property) {
-            return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
-        },
-        setStyle: function(elem, attr) {
-            for (var property in attr) {
-                elem.style[property] = attr[property];
-            }
-        },
-        setAttr: function(elem, attr) {
-            for (var property in attr) {
-                elem.setAttribute(property, attr[property]);
-            }
-        },
-        getAttr: function(elem, property) {
-            return elem.getAttribute(property);
+            this.childComponent[newIdx] = this.childComponent.splice(targetIdx, 1, this.childComponent[newIdx])[0];
         }
 
 
@@ -115,6 +98,8 @@
         this.startY = 0;
         this.sourceX = 0;
         this.sourceY = 0;
+        this.centerX = 0;
+        this.centerY = 0;
         this.margin = options.widget_margin;
         this.dimensions = options.widget_base_dimensions;
         this.init();
@@ -124,11 +109,12 @@
         constructor: GridsterComponent,
         init: function() {
             this.setDrag();
-            this.setStyle(this.node, {
+            setStyle(this.node, {
                 'marginTop': this.margin[0] + 'px',
                 'marginLeft': this.margin[1] + 'px',
                 'width': this.dimensions[0] + 'px',
-                'height': this.dimensions[1] + 'px'
+                'height': this.dimensions[1] + 'px',
+                'position': 'absolute'
             })
 
         },
@@ -139,10 +125,9 @@
                 indexnode = null,
                 parent = this.parent.node,
                 matrix = this.parent.matrix,
+                components = this.parent.childComponent,
                 move = false,
                 changenode = null,
-                indexArray = null,
-                n = 0,
                 widthPart = this.parent.widthPart,
                 width = _this.dimensions[0],
                 height = _this.dimensions[1],
@@ -159,13 +144,8 @@
                 this.sourceX = _this.sourceX = pos.x;
                 this.sourceY = _this.sourceY = pos.y;
 
-                for (var i = 0; i < _this.parent.childComponent.length; i++) {
-                    if (self == _this.parent.childs[i]) {
-                        index = i;
-                    }
-                }
-
-
+                _this.centerX = _this.sourceX + width / 2;
+                _this.centerY = _this.sourceY + height / 2;
 
                 document.addEventListener("mousemove", drag, false);
                 document.addEventListener("mouseup", dragEnd, false);
@@ -177,130 +157,63 @@
                     currentY = event.pageY,
                     distanceX = currentX - self.startX,
                     distanceY = currentY - self.startY,
+
                     x = 0,
                     y = 0,
                     idxX = 0,
                     idxY = 0,
-                    col = _this.col,
-                    row = _this.row,
+
                     changeIdx = null;
+
+                for (var i = 0; i < _this.parent.childComponent.length; i++) {
+                    if (self == _this.parent.childs[i]) {
+                        index = i;
+                    }
+                }
 
                 if ((self.sourceX + distanceX).toFixed() < 0) {
                     x = 0;
-                } else if ((self.sourceX + distanceX).toFixed() > parseInt(_this.getStyle(parent, 'width')) - parseInt(_this.getStyle(self, 'width'))) {
-                    x = parseInt(_this.getStyle(parent, 'width')) - parseInt(_this.getStyle(self, 'width'));
+                } else if ((self.sourceX + distanceX).toFixed() > parseInt(getStyle(parent, 'width')) - parseInt(getStyle(self, 'width'))) {
+                    x = parseInt(getStyle(parent, 'width')) - parseInt(getStyle(self, 'width'));
                 } else {
                     x = (self.sourceX + distanceX).toFixed();
                 }
 
                 if ((self.sourceY + distanceY).toFixed() < 0) {
                     y = 0;
-                } else if ((self.sourceY + distanceY).toFixed() > parseInt(_this.getStyle(parent, 'height')) - parseInt(_this.getStyle(self, 'height'))) {
-                    y = parseInt(_this.getStyle(parent, 'height')) - parseInt(_this.getStyle(self, 'height'));
+                } else if ((self.sourceY + distanceY).toFixed() > parseInt(getStyle(parent, 'height')) - parseInt(getStyle(self, 'height'))) {
+                    y = parseInt(getStyle(parent, 'height')) - parseInt(getStyle(self, 'height'));
                 } else {
                     y = (self.sourceY + distanceY).toFixed();
                 }
-                console.log(row + ',' + col)
-                if (!move) {
-                    if (x % (width + marginLeft) > (width + marginLeft) / 2 && distanceX > 0) {
-                        changeIdx = (row - 1) * widthPart + col;
-                        changenode = _this.parent.childs[changeIdx];
-                        col = col + 1
-                        if (!changenode) return;
-                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
-                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
+                var centerX = _this.centerX = parseInt(x) + width / 2;
+                var centerY = _this.centerY = parseInt(y) + height / 2;
 
-                    } else if (x % (width + marginLeft) < (width + marginLeft) / 2 && distanceX < 0) {
-
+                for (var i = 0; i < components.length; i++) {
+                    if ((components[i].centerX + width / 2 > centerX) && (components[i].centerX - width / 2 < centerX) && (components[i].centerY + height / 2 > centerY) && (components[i].centerY - height / 2 < centerY) && i != index && !changenode) {
+                        changenode = _this.parent.childs[i];
+                        changeIdx = i;
+                        nx = (_this.parent.childComponent[index].col - 1) * (width + marginLeft);
+                        ny = (_this.parent.childComponent[index].row - 1) * (height + marginTop);
+                        move = true;
                     }
-
-                    if (y % (height + marginTop) > (height + marginTop) / 2 && distanceY > 0) {
-
-                    } else if (y % (height + marginTop) < (height + marginTop) / 2 && distanceY < 0) {
-
-                    }
-
-                    move = true;
-
-                    if (changenode && row && col && move) {
-                        _this.setStyle(changenode, {
-                            'transform': 'translate(' + nx + 'px,' + ny + 'px)',
-                        })
-                        _this.parent.interchange(_this.parent.childs[index], changenode, index, changeIdx);
-                        row = null;
-                        col = null;
-                        nx = null;
-                        ny = null;
-                        changenode = null;
-                        changeIdx = null;
-
-                        move = false;
-                    }
-                } else {
-
+                }
+                if (changenode && move) {
+                    setStyle(changenode, {
+                        'transform': 'translate(' + nx + 'px,' + ny + 'px)',
+                    })
+                    _this.parent.interchange(self, changenode, index, changeIdx);
+                    _this.parent.sort();
+                    row = null;
+                    col = null;
+                    nx = null;
+                    ny = null;
+                    changenode = null;
+                    changeIdx = null;
+                    index = null;
+                    move = false;
                 }
 
-
-
-                /*if ((Math.abs(distanceX) > _this.dimensions[0] * (n + 0.5) || Math.abs(distanceY) > _this.dimensions[1] * (n + 0.5)) && !move) {
-                    var changenode = null;
-                    var nx, ny;
-                    col = parseInt(x / (_this.dimensions[0] + _this.margin[0])) + 1;
-                    row = parseInt(y / (_this.dimensions[1] + _this.margin[1])) + 1;
-                    if (distanceX > _this.dimensions[0] * (n + 0.5)) { //right
-
-                        changeIdx = (nrow - 1) * widthPart + ncol;
-                        changenode = _this.parent.childs[changeIdx];
-                        ncol = ncol + 1
-                        if (!changenode) return;
-                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) - _this.dimensions[0] - _this.margin[0];
-                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
-                        move = true;
-
-                    } else if (distanceY > _this.dimensions[1] * (n + 0.5)) { //bottom
-                        console.log('2')
-
-                        changenode = _this.parent.childs[nrow * widthPart + ncol - 1];
-                        nrow += 1
-                        if (!changenode) return;
-                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
-                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) - _this.dimensions[1] - _this.margin[1];
-
-                    } else if (-distanceX > _this.dimensions[1] * (n + 0.5)) { //left
-                        console.log('3')
-
-                        changenode = _this.parent.childs[(nrow - 1) * widthPart + ncol - 1];
-                        ncol -= 1;
-                        if (!changenode) return;
-                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]) + _this.dimensions[0] + _this.margin[0];
-                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]);
-
-                    } else if (-distanceY > _this.dimensions[1] * (n + 0.5)) { //top
-                        console.log('4')
-                        changenode = _this.parent.childs[(nrow - 2) * widthPart + ncol - 1];
-                        nrow -= 1;
-                        if (!changenode) return;
-                        nx = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[4]);
-                        ny = parseInt(_this.getStyle(changenode, 'transform').match(/-?\d+/g)[5]) + _this.dimensions[1] + _this.margin[1];
-
-
-                    }
-                    if (changenode && row && col) {
-                        _this.setStyle(changenode, {
-                            'transform': 'translate(' + nx + 'px,' + ny + 'px)',
-                        })
-                        _this.parent.interchange(_this.parent.childs[index], changenode, index, changeIdx);
-                        n += 1;
-                        row = null;
-                        col = null;
-                        nx = null;
-                        ny = null;
-                        changenode = null;
-                        changeIdx = null;
-                        move = false;
-                    }
-
-                }*/
 
                 _this.setTargetPos({
                     x: x,
@@ -349,36 +262,28 @@
 
             return transform;
         },
-        setStyle: function(elem, attr) {
-            for (var property in attr) {
-                elem.style[property] = attr[property];
-            }
-        },
-        getStyle: function(elem, property) {
-            return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
-        },
         getTargetPos: function() {
             var pos = { x: 0, y: 0 };
             var elem = this.node;
             var transform = this.getTransform();
             if (transform) {
-                var transformValue = this.getStyle(elem, transform);
+                var transformValue = getStyle(elem, transform);
                 if (transformValue == 'none') {
                     elem.style[transform] = 'translate(0, 0)';
                     return pos;
                 } else {
-                    var temp = transformValue.match(/-?\d+/g);
+                    var temp = transformValue.split(/[ ,]+/);
                     return pos = {
                         x: parseInt(temp[4].trim()),
                         y: parseInt(temp[5].trim())
                     }
                 }
             } else {
-                if (this.getStyle(elem, 'position') == 'static') {
+                if (getStyle(elem, 'position') == 'static') {
                     elem.style.position = 'absolute';
                 } else {
-                    var x = parseInt(this.getStyle(elem, 'left') ? this.getStyle(elem, 'left') : 0);
-                    var y = parseInt(this.getStyle(elem, 'top') ? this.getStyle(elem, 'top') : 0);
+                    var x = parseInt(getStyle(elem, 'left') ? getStyle(elem, 'left') : 0);
+                    var y = parseInt(getStyle(elem, 'top') ? getStyle(elem, 'top') : 0);
                     return pos = {
                         x: x,
                         y: y
@@ -389,7 +294,48 @@
 
     }
 
-    $.fn.gridster = function(opts) {
+    function getNextElement(element) {
+        var e = element.nextSibling;
+        if (e == null) { //测试同胞节点是否存在，否则返回空
+            return null;
+        }
+        if (e.nodeType == 3) { //如果同胞元素为文本节点
+            var two = getNextElement(e);
+            if (two == null) return;
+            if (two.nodeType == 1)
+                return two;
+        } else {
+            if (e.nodeType == 1) { //确认节点为元素节点才返回
+                return e;
+            } else {
+                return false;
+            }
+        }
+    }
+
+
+    function setStyle(elem, attr) {
+        for (var property in attr) {
+            elem.style[property] = attr[property];
+        }
+    }
+
+    function getStyle(elem, property) {
+        return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
+    }
+
+
+    function setAttr(elem, attr) {
+        for (var property in attr) {
+            elem.setAttribute(property, attr[property]);
+        }
+    }
+
+    function getAttr(elem, property) {
+        return elem.getAttribute(property);
+    }
+
+    $.fn.tsgridster = function(opts) {
         return this.each(function() {
             if (!$(this).data('gridster')) {
                 $(this).data('gridster', new Gridster(this, opts));
