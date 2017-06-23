@@ -14,7 +14,7 @@
         this.options = options;
         this.childs = node.children;
         this.widthPart = parseInt(parseFloat(getStyle(node, 'width')).toFixed() / options.widget_base_dimensions[0]);
-        this.heightPart = parseInt(parseFloat(getStyle(node, 'height')).toFixed() / options.widget_base_dimensions[1]);
+        this.heightPart = Math.ceil(this.childs.length / this.widthPart);
         this.childComponent = new Array(this.childs.length);
         this.init();
 
@@ -337,9 +337,7 @@
 
     $.fn.tsgridster = function(opts) {
         return this.each(function() {
-            if (!$(this).data('gridster')) {
-                $(this).data('gridster', new Gridster(this, opts));
-            }
+            $(this).data('gridster', new Gridster(this, opts));
         });
     };
 });
