@@ -17,13 +17,14 @@
         this.heightPart = Math.ceil(this.childs.length / this.widthPart);
         this.childComponent = new Array(this.childs.length);
         this.init();
-
+        console.log(this)
     };
 
     Gridster.prototype = {
         init: function() {
-            this.initMatrix();
             this.initChild();
+            this.initMatrix();
+
             this.sort();
             document.body.setAttribute('onselectstart', 'return false')
             setStyle(this.node, {
@@ -38,39 +39,63 @@
 
         },
         sort: function(index, array) {
-            var now = 0;
-            var len = this.childs.length;
+            var now = 0,
+                len = this.childs.length,
+                width = this.options.widget_base_dimensions[0],
+                height = this.options.widget_base_dimensions[1],
+                marginLeft = this.options.widget_margin[0],
+                marginTop = this.options.widget_margin[1];
             for (var i = 0; i < len; i++) {
                 var child = this.childs[i];
+                var childComponent = this.childComponent[i];
                 if (index && index == i) {
                     continue;
                 } else if (child) {
                     setStyle(child, {
-                        'transform': 'translate(' + ((this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0])) + 'px,' + ((this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1])) + 'px)',
+                        'transform': 'translate(' + ((this.matrix[now][0] - 1) * (width + marginLeft)) + 'px,' + ((this.matrix[now][1] - 1) * (height + marginTop)) + 'px)',
                         //     'transition': 'all .5s linear'
                     });
                     setAttr(child, {
                         'data-col': this.matrix[i][0],
                         'data-row': this.matrix[i][1]
                     });
-                    this.childComponent[i].col = this.matrix[i][0];
-                    this.childComponent[i].row = this.matrix[i][1];
+                    childComponent.col = this.matrix[i][0];
+                    childComponent.row = this.matrix[i][1];
 
-                    this.childComponent[i].centerX = (this.matrix[now][0] - 1) * (this.options.widget_base_dimensions[0] + this.options.widget_margin[0]) + (this.options.widget_base_dimensions[0] + this.options.widget_margin[0]) / 2;
-                    this.childComponent[i].centerY = (this.matrix[now][1] - 1) * (this.options.widget_base_dimensions[1] + this.options.widget_margin[1]) + (this.options.widget_base_dimensions[1] + this.options.widget_margin[1]) / 2;
+                    childComponent.centerX = (this.matrix[now][0] - 1) * (width + marginLeft) + (width + marginLeft) / 2;
+                    childComponent.centerY = (this.matrix[now][1] - 1) * (height + marginTop) + (height + marginTop) / 2;
                     now++;
                 }
             }
         },
         initMatrix: function() {
+            /*var len = this.childs.length;
+            if (this.matrix) {
+                for (var j = 1; j < len; j++) {
+                    var childComponent = this.childComponent[j];
+                    this.matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
+                    this.matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
+                }
+                console.log('in')
+            } else {
+                var heightLen = this.heightPart,
+                    widthLen = this.widthPart,
+                    matrix = new Array(heightLen * widthLen);
+                for (var i = 1; i <= heightLen; i++) {
+                    for (var j = 1; j <= widthLen; j++) {
+                        matrix[(i - 1) * widthLen + j - 1] = [j, i];
+                    }
+                }
+                this.matrix = matrix;
+            }*/
             var len = this.childs.length,
                 heightLen = this.heightPart,
                 widthLen = this.widthPart,
                 matrix = new Array(heightLen * widthLen);
-            for (var i = 1; i <= heightLen; i++) {
-                for (var j = 1; j <= widthLen; j++) {
-                    matrix[(i - 1) * widthLen + j - 1] = [j, i];
-                }
+            for (var j = 1; j < len; j++) {
+                var childComponent = this.childComponent[j];
+                matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
+                matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
             }
             this.matrix = matrix;
         },
@@ -92,6 +117,8 @@
     }
 
     var GridsterComponent = function(parent, child, options) {
+        var sizeX = child.getAttribute('data-sizeX') ? child.getAttribute('data-sizeX') : 1,
+            sizeY = child.getAttribute('data-sizeY') ? child.getAttribute('data-sizeY') : 1;
         this.node = child;
         this.parent = parent;
         this.startX = 0;
@@ -100,8 +127,13 @@
         this.sourceY = 0;
         this.centerX = 0;
         this.centerY = 0;
+        this.sizeX = sizeX < parent.widthPart ? sizeX : parent.widthPart;
+        this.sizeY = sizeY < parent.heightPart ? sizeY : parent.heightPart;
         this.margin = options.widget_margin;
         this.dimensions = options.widget_base_dimensions;
+        this.node.setAttribute('data-sizeX', this.sizeX);
+        this.node.setAttribute('data-sizeY', this.sizeY);
+
         this.init();
     }
 
@@ -109,15 +141,30 @@
         constructor: GridsterComponent,
         init: function() {
             this.setDrag();
+            //     this.initZoom();
             setStyle(this.node, {
                 'marginTop': this.margin[0] + 'px',
                 'marginLeft': this.margin[1] + 'px',
-                'width': this.dimensions[0] + 'px',
-                'height': this.dimensions[1] + 'px',
+                'width': this.dimensions[0] * this.sizeX + this.margin[1] * (this.sizeX - 1) + 'px',
+                'height': this.dimensions[1] * this.sizeY + this.margin[0] * (this.sizeY - 1) + 'px',
                 'position': 'absolute'
             })
 
         },
+        /*initZoom: function() {
+            var node = this.node;
+            var zoom = document.createElement('span')
+
+            setStyle(zoom, {
+                'position': 'absolute',
+                'bottom': '3px',
+                'right': '3px',
+                'width': '20px',
+                'height': '20px'
+            })
+
+            node.appendChild(zoom);
+        },*/
         setDrag: function() {
             var self = this.node,
                 _this = this,
@@ -203,6 +250,7 @@
                         'transform': 'translate(' + nx + 'px,' + ny + 'px)',
                     })
                     _this.parent.interchange(self, changenode, index, changeIdx);
+                    _this.parent.initMatrix();
                     _this.parent.sort();
                     row = null;
                     col = null;
@@ -233,6 +281,7 @@
             }
 
             function dragEnd(event) {
+                _this.parent.initMatrix();
                 _this.parent.sort();
                 move = false;
                 document.removeEventListener('mousemove', drag);
