@@ -16,6 +16,8 @@
         this.widthPart = parseInt(parseFloat(getStyle(node, 'width')).toFixed() / options.widget_base_dimensions[0]);
         this.heightPart = Math.ceil(this.childs.length / this.widthPart);
         this.childComponent = new Array(this.childs.length);
+        this.base_width = options.widget_base_dimensions[0];
+        this.base_height = options.widget_base_dimensions[1];
         this.init();
         console.log(this)
     };
@@ -69,6 +71,15 @@
             }
         },
         initMatrix: function() {
+            var heightLen = this.heightPart,
+                widthLen = this.widthPart,
+                matrix = new Array(heightLen * widthLen);
+            for (var i = 1; i <= heightLen; i++) {
+                for (var j = 1; j <= widthLen; j++) {
+                    matrix[(i - 1) * widthLen + j - 1] = [j, i];
+                }
+            }
+            this.matrix = matrix;
             /*var len = this.childs.length;
             if (this.matrix) {
                 for (var j = 1; j < len; j++) {
@@ -88,7 +99,7 @@
                 }
                 this.matrix = matrix;
             }*/
-            var len = this.childs.length,
+            /*var len = this.childs.length,
                 heightLen = this.heightPart,
                 widthLen = this.widthPart,
                 matrix = new Array(heightLen * widthLen);
@@ -97,7 +108,7 @@
                 matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
                 matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
             }
-            this.matrix = matrix;
+            this.matrix = matrix;*/
         },
         interchange: function(newElem, targetElem, newIdx, targetIdx) {
             if (!newElem || !targetElem) return;
@@ -141,30 +152,76 @@
         constructor: GridsterComponent,
         init: function() {
             this.setDrag();
-            //     this.initZoom();
+            this.zoom = this.initZoom();
             setStyle(this.node, {
                 'marginTop': this.margin[0] + 'px',
                 'marginLeft': this.margin[1] + 'px',
                 'width': this.dimensions[0] * this.sizeX + this.margin[1] * (this.sizeX - 1) + 'px',
-                'height': this.dimensions[1] * this.sizeY + this.margin[0] * (this.sizeY - 1) + 'px',
-                'position': 'absolute'
+                'height': this.dimensions[1] * this.sizeY + this.margin[0] * (this.sizeY - 1) + 'px'
             })
+            console.log(this.node)
+            addClass(this.node, 'grid')
 
         },
-        /*initZoom: function() {
+        initZoom: function() {
             var node = this.node;
-            var zoom = document.createElement('span')
+            var zoom = document.createElement('span');
 
-            setStyle(zoom, {
-                'position': 'absolute',
-                'bottom': '3px',
-                'right': '3px',
-                'width': '20px',
-                'height': '20px'
-            })
+            addClass(zoom, 'zoom')
 
             node.appendChild(zoom);
-        },*/
+            this.setSpanDrag(zoom);
+
+            return zoom;
+        },
+        setSpanDrag: function(node) {
+            var self = node,
+                _this = this,
+                startX = null,
+                startY = null,
+                distanceX = null,
+                distanceY = null,
+                base_width = this.parent.base_width,
+                base_height = this.parent.base_height;
+
+            node.addEventListener('mousedown', dragStart, false);
+
+            function dragStart(event) {
+                startX = event.pageX;
+                startY = event.pageY;
+
+                document.addEventListener("mousemove", drag, false);
+                document.addEventListener("mouseup", dragEnd, false);
+
+                event.stopPropagation();
+            }
+
+            function drag(event) {
+
+                var currentX = event.pageX,
+                    currentY = event.pageY,
+                    child = _this.node;
+
+                distanceX = currentX - startX;
+                distanceY = currentY - startY;
+
+                child.style.width = currentX - parseInt(child.offsetLeft) + 'px';
+                child.style.height = currentY - parseInt(child.offsetTop) + 'px';
+
+                event.stopPropagation();
+            }
+
+            function dragEnd(event) {
+
+                _this.col = parseInt(distanceX / base_width);
+                _this.row = parseInt(distanceY / base_height);
+
+                _this.parent.sort()
+
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', dragEnd)
+            }
+        },
         setDrag: function() {
             var self = this.node,
                 _this = this,
@@ -173,7 +230,6 @@
                 parent = this.parent.node,
                 matrix = this.parent.matrix,
                 components = this.parent.childComponent,
-                move = false,
                 changenode = null,
                 widthPart = this.parent.widthPart,
                 width = _this.dimensions[0],
@@ -242,10 +298,9 @@
                         changeIdx = i;
                         nx = (_this.parent.childComponent[index].col - 1) * (width + marginLeft);
                         ny = (_this.parent.childComponent[index].row - 1) * (height + marginTop);
-                        move = true;
                     }
                 }
-                if (changenode && move) {
+                if (changenode) {
                     setStyle(changenode, {
                         'transform': 'translate(' + nx + 'px,' + ny + 'px)',
                     })
@@ -259,7 +314,6 @@
                     changenode = null;
                     changeIdx = null;
                     index = null;
-                    move = false;
                 }
 
 
@@ -269,7 +323,6 @@
                 })
 
                 if (Math.abs(distanceX) > (_this.dimensions[0] + _this.margin[0]) || Math.abs(distanceY) > (_this.dimensions[1] + _this.margin[1])) {
-                    move = false;
 
                     for (var i = 0; i < _this.parent.childComponent.length; i++) {
                         if (self == _this.parent.childs[i]) {
@@ -360,29 +413,42 @@
                 return false;
             }
         }
-    }
+    };
 
 
     function setStyle(elem, attr) {
         for (var property in attr) {
             elem.style[property] = attr[property];
         }
-    }
+    };
 
     function getStyle(elem, property) {
         return document.defaultView.getComputedStyle ? document.defaultView.getComputedStyle(elem)[property] : elem.currentStyle[property];
-    }
+    };
 
 
     function setAttr(elem, attr) {
         for (var property in attr) {
             elem.setAttribute(property, attr[property]);
         }
-    }
+    };
 
     function getAttr(elem, property) {
         return elem.getAttribute(property);
-    }
+    };
+
+    function hasClass(elem, cName) {
+        return !!elem.className.match(new RegExp("(\\s|^)" + cName + "(\\s|$)")); // ( \\s|^ ) 判断前面是否有空格 （\\s | $ ）判断后面是否有空格 两个感叹号为转换为布尔值 以方便做判断
+    };
+
+    function addClass(elem, cName) {
+        if (!hasClass(elem, cName)) {
+            if (elem.className)
+                elem.className += " " + cName;
+            else
+                elem.className = cName;
+        };
+    };
 
     $.fn.tsgridster = function(opts) {
         return this.each(function() {
