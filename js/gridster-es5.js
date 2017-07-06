@@ -26,7 +26,6 @@
         init: function() {
             this.initChild();
             this.initMatrix();
-
             this.sort();
             document.body.setAttribute('onselectstart', 'return false')
             setStyle(this.node, {
@@ -54,18 +53,20 @@
                     continue;
                 } else if (child) {
                     setStyle(child, {
-                        'transform': 'translate(' + ((this.matrix[now][0] - 1) * (width + marginLeft)) + 'px,' + ((this.matrix[now][1] - 1) * (height + marginTop)) + 'px)',
-                        //     'transition': 'all .5s linear'
+                        'transform': 'translate(' + ((this.matrix[now][0] - 1) * (width + marginLeft)) + 'px,' + ((this.matrix[now][1] - 1) * (height + marginTop)) + 'px)'
                     });
                     setAttr(child, {
-                        'data-col': this.matrix[i][0],
-                        'data-row': this.matrix[i][1]
+                        'data-col': childComponent.col || this.matrix[i][0],
+                        'data-row': childComponent.row || this.matrix[i][1]
                     });
                     childComponent.col = this.matrix[i][0];
                     childComponent.row = this.matrix[i][1];
 
                     childComponent.centerX = (this.matrix[now][0] - 1) * (width + marginLeft) + (width + marginLeft) / 2;
                     childComponent.centerY = (this.matrix[now][1] - 1) * (height + marginTop) + (height + marginTop) / 2;
+
+                    childComponent.startX = (this.matrix[now][0] - 1) * (width + marginLeft);
+                    childComponent.startY = (this.matrix[now][1] - 1) * (height + marginTop);
                     now++;
                 }
             }
@@ -74,41 +75,51 @@
             var heightLen = this.heightPart,
                 widthLen = this.widthPart,
                 matrix = new Array(heightLen * widthLen);
-            for (var i = 1; i <= heightLen; i++) {
-                for (var j = 1; j <= widthLen; j++) {
-                    matrix[(i - 1) * widthLen + j - 1] = [j, i];
+
+            var childs = this.childs,
+                components = this.childComponent,
+                len = childs.length;
+            for (var i = 0; i < len; i++) {
+                console.log(components[i])
+                if (i == 0) {
+                    matrix[i] = [components[i].row || components[i].row = 1, components[i].col || components[i].col = 1];
+                } else {
+                    var preComponent = components[i - 1];
+                    console.log(widthLen)
+                    matrix[i] = components[i].sizeX + preComponent.sizeX > widthLen ? [preComponent.row + preComponent.sizeY, preComponent.col] : [preComponent.col + sizeX, preComponent.row]
                 }
             }
-            this.matrix = matrix;
-            /*var len = this.childs.length;
-            if (this.matrix) {
-                for (var j = 1; j < len; j++) {
-                    var childComponent = this.childComponent[j];
-                    this.matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
-                    this.matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
-                }
-                console.log('in')
-            } else {
-                var heightLen = this.heightPart,
+
+            this.matrix = matrix
+                /*var len = this.childs.length;
+                if (this.matrix) {
+                    for (var j = 1; j < len; j++) {
+                        var childComponent = this.childComponent[j];
+                        this.matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
+                        this.matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
+                    }
+                    console.log('in')
+                } else {
+                    var heightLen = this.heightPart,
+                        widthLen = this.widthPart,
+                        matrix = new Array(heightLen * widthLen);
+                    for (var i = 1; i <= heightLen; i++) {
+                        for (var j = 1; j <= widthLen; j++) {
+                            matrix[(i - 1) * widthLen + j - 1] = [j, i];
+                        }
+                    }
+                    this.matrix = matrix;
+                }*/
+                /*var len = this.childs.length,
+                    heightLen = this.heightPart,
                     widthLen = this.widthPart,
                     matrix = new Array(heightLen * widthLen);
-                for (var i = 1; i <= heightLen; i++) {
-                    for (var j = 1; j <= widthLen; j++) {
-                        matrix[(i - 1) * widthLen + j - 1] = [j, i];
-                    }
+                for (var j = 1; j < len; j++) {
+                    var childComponent = this.childComponent[j];
+                    matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
+                    matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
                 }
-                this.matrix = matrix;
-            }*/
-            /*var len = this.childs.length,
-                heightLen = this.heightPart,
-                widthLen = this.widthPart,
-                matrix = new Array(heightLen * widthLen);
-            for (var j = 1; j < len; j++) {
-                var childComponent = this.childComponent[j];
-                matrix[j][0] = childComponent[j + 1].col - childComponent[j].sizeX;
-                matrix[j][1] = childComponent[j].row - childComponent[j].sizeY;
-            }
-            this.matrix = matrix;*/
+                this.matrix = matrix;*/
         },
         interchange: function(newElem, targetElem, newIdx, targetIdx) {
             if (!newElem || !targetElem) return;
@@ -128,8 +139,8 @@
     }
 
     var GridsterComponent = function(parent, child, options) {
-        var sizeX = child.getAttribute('data-sizeX') ? child.getAttribute('data-sizeX') : 1,
-            sizeY = child.getAttribute('data-sizeY') ? child.getAttribute('data-sizeY') : 1;
+        var sizeX = child.getAttribute('data-sizeX'),
+            sizeY = child.getAttribute('data-sizeY');
         this.node = child;
         this.parent = parent;
         this.startX = 0;
@@ -138,12 +149,12 @@
         this.sourceY = 0;
         this.centerX = 0;
         this.centerY = 0;
-        this.sizeX = sizeX < parent.widthPart ? sizeX : parent.widthPart;
-        this.sizeY = sizeY < parent.heightPart ? sizeY : parent.heightPart;
+        this.sizeX = sizeX ? (sizeX < parent.widthPart ? sizeX : parent.widthPart) : 1;
+        this.sizeY = sizeY ? (sizeY < parent.heightPart ? sizeY : parent.heightPart) : 1;
         this.margin = options.widget_margin;
         this.dimensions = options.widget_base_dimensions;
-        this.node.setAttribute('data-sizeX', this.sizeX);
-        this.node.setAttribute('data-sizeY', this.sizeY);
+        this.options = options;
+
 
         this.init();
     }
@@ -152,7 +163,12 @@
         constructor: GridsterComponent,
         init: function() {
             this.setDrag();
-            this.zoom = this.initZoom();
+            if (this.options.resize.enable) {
+                this.resize = this.options.resize;
+                this.zoom = this.initZoom();
+
+            }
+
             setStyle(this.node, {
                 'marginTop': this.margin[0] + 'px',
                 'marginLeft': this.margin[1] + 'px',
@@ -160,6 +176,8 @@
                 'height': this.dimensions[1] * this.sizeY + this.margin[0] * (this.sizeY - 1) + 'px'
             })
             console.log(this.node)
+            this.node.setAttribute('data-sizeX', this.sizeX);
+            this.node.setAttribute('data-sizeY', this.sizeY);
             addClass(this.node, 'grid')
 
         },
@@ -177,18 +195,25 @@
         setSpanDrag: function(node) {
             var self = node,
                 _this = this,
-                startX = null,
-                startY = null,
                 distanceX = null,
                 distanceY = null,
                 base_width = this.parent.base_width,
-                base_height = this.parent.base_height;
+                base_height = this.parent.base_height,
+                excurrentX = null,
+                excurrentY = null,
+                child = _this.node;
+
+            for (var resizeFun in _this.options.resize) {
+                if (resizeFun == 'enable')
+                    continue;
+                else
+                    _this.resize[resizeFun] == _this.options.resize[resizeFun];
+            }
+
 
             node.addEventListener('mousedown', dragStart, false);
 
             function dragStart(event) {
-                startX = event.pageX;
-                startY = event.pageY;
 
                 document.addEventListener("mousemove", drag, false);
                 document.addEventListener("mouseup", dragEnd, false);
@@ -199,24 +224,41 @@
             function drag(event) {
 
                 var currentX = event.pageX,
-                    currentY = event.pageY,
-                    child = _this.node;
+                    currentY = event.pageY;
 
-                distanceX = currentX - startX;
-                distanceY = currentY - startY;
+                distanceX = excurrentX == null ? 0 : currentX - excurrentX;
+                distanceY = excurrentX == null ? 0 : currentY - excurrentY;
 
-                child.style.width = currentX - parseInt(child.offsetLeft) + 'px';
-                child.style.height = currentY - parseInt(child.offsetTop) + 'px';
+                _this.width = child.style.width = ((parseInt(child.style.width) + distanceX) > base_width ? (parseInt(child.style.width) + distanceX) : base_width) + 'px';
+                _this.height = child.style.height = ((parseInt(child.style.height) + distanceY) > base_height ? (parseInt(child.style.height) + distanceY) : base_height) + 'px';
+
+                if (_this.resize && _this.resize.resize)
+                    _this.resize.resize(event, child)
 
                 event.stopPropagation();
+
+                excurrentX = currentX;
+                excurrentY = currentY;
+
             }
 
             function dragEnd(event) {
 
-                _this.col = parseInt(distanceX / base_width);
-                _this.row = parseInt(distanceY / base_height);
+                _this.sizeX = parseInt((parseInt(_this.width) / base_width).toFixed()) == 0 ? 1 : parseInt((parseInt(_this.width) / base_width).toFixed());
+                _this.sizeY = parseInt((parseInt(_this.height) / base_height).toFixed()) == 0 ? 1 : parseInt((parseInt(_this.height) / base_height).toFixed());
 
-                _this.parent.sort()
+                _this.width = child.style.width = _this.sizeX * base_width + 'px';
+                _this.height = child.style.height = _this.sizeY * base_height + 'px';
+
+                _this.parent.sort();
+
+                if (_this.resize && _this.resize.stop)
+                    _this.resize.stop(event, child)
+
+                excurrentX = null;
+                excurrentY = null;
+
+                console.log(_this)
 
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', dragEnd)
@@ -249,6 +291,8 @@
 
                 _this.centerX = _this.sourceX + width / 2;
                 _this.centerY = _this.sourceY + height / 2;
+
+                console.log(_this)
 
                 document.addEventListener("mousemove", drag, false);
                 document.addEventListener("mouseup", dragEnd, false);

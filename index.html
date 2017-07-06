@@ -4,18 +4,24 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+    <!--<script src="js/require.js"></script>-->
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/gridster.css">
 </head>
+<style>
+    .auto {
+        display: flex;
+    }
+</style>
 
 <body>
     <ul id="test">
-        <li data-sizeX='1' data-sizeY='1' data-col="2" data-row="1" class="test">
+        <li data-sizeX='5' data-sizeY='2' data-col="2" data-row="1" class="test">
             1
         </li>
-        <!--<li data-sizeX='2' data-sizeY='1'>2
+        <li>2
         </li>
-        <li>3
+        <!--  <li>3
         </li>
         <li>4
         </li>
@@ -65,34 +71,62 @@
         <li>12
         </li>
     </ul>-->
+
+    <div class="auto"></div>
 </body>
 
 <script src="js/gridster-es5.js"></script>
+<!--<script src="js/autoprefixer.js"></script>-->
 <script>
     /* $("#test").tsgridster({
-                                                        widget_margin: [10, 10],
-                                                        widget_base_dimensions: [200, 100],
-                                                        draggable: {
-                                                            stop: function($w) {}
-                                                        }
-                                                    })*/
+                                                                                                                                                                                    widget_margin: [10, 10],
+                                                                                                                                                                                    widget_base_dimensions: [200, 100],
+                                                                                                                                                                                    draggable: {
+                                                                                                                                                                                        stop: function($w) {}
+                                                                                                                                                                                    }
+                                                                                                                                                                                })*/
 
     $("#test").tsgridster({
-        widget_margin: [10, 10],
-        widget_base_dimensions: [200, 100],
-        draggable: {
-            stop: function(e, ui, $widget) {}
-        },
-        resize: {
-            enable: true,
-            resize: function(e, ui, $widget) {
-
+            widget_margin: [10, 10],
+            widget_base_dimensions: [200, 100],
+            draggable: {
+                stop: function(e, $widget) {}
             },
-            stop: function(e, ui, $widget) {
-
+            resize: {
+                enable: true,
+                stop: function(e, $widget) {
+                    console.log(e)
+                    console.log($widget)
+                }
             }
-        }
-    })
+        })
+        /*    var autoprefixer = require('autoprefixer');
+            var postcss = require('postcss');
+
+            postcss([autoprefixer]).process(css).then(function(result) {
+                result.warnings().forEach(function(warn) {
+                    console.warn(warn.toString());
+                });
+                console.log(result.css);
+            });*/
+
+    /*define(['require', 'autoprefixer'], function(require) {
+        var autoprefixer = require('autoprefixer');
+        var postcss = require('postcss');
+
+        postcss([autoprefixer]).process(css).then(function(result) {
+            result.warnings().forEach(function(warn) {
+                console.warn(warn.toString());
+            });
+            console.log(result.css);
+        });
+    });*/
+    /*var auto = autoprefixer()
+    auto()
+    console.log(auto)
+
+    var info = autoprefixer().info();
+    console.log(info);*/
 </script>
 
 </html>
